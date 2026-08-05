@@ -206,7 +206,7 @@
     <div>
       <h1>公開市場財務性投資 — 持股儀表板</h1>
     </div>
-    <button class="theme-toggle" onclick="toggleTheme()">切換淺色／深色</button>
+    
   </div>
 
   <div class="top-grid">
@@ -257,11 +257,11 @@
 // ---- Data (from 資本市場股票.xlsx, Section B) ----
 // price: 人工查詢之最新現價；priceDate: 該報價的資料時間（來源：Yahoo股市/玉山wantgoo/histock 等看盤網站快照）
 const holdings = [
-  { code: '4137', name: '麗豐-KY', type: '公開市場(上市)', exch: 'tse', shares: 10000, costPerShare: 101.8444, cost: 1018444, price: 95.11, priceDate: '2026/08/03 收盤', note: '上市KY股；美容連鎖克麗緹娜；近5年平均殖利率>10%' },
-  { code: '4178', name: '永笙-KY', type: '公開市場(上市)', exch: 'tse', shares: 5658674, costPerShare: 25.4014, cost: 143738145, price: 17.65, priceDate: '2026/08/04 收盤', note: '臍帶血細胞庫；計劃115年Q2升板上市' },
-  { code: '6712', name: '長聖生技', type: '公開市場(上櫃)', exch: 'otc', shares: 13000, costPerShare: 142.1252, cost: 1847628, price: 150.00, priceDate: '⚠ 2026/07/17（資料較舊，建議更新）', note: '上櫃股' },
-  { code: '7835', name: '永悅健康-創', type: '公開市場(創新板)', exch: 'tse', shares: 237000, costPerShare: 48.00, cost: 11376000, price: 28.80, priceDate: '2026/08/04 收盤', note: '2026年7月創新板新掛牌；蜜月行情失靈' },
-  { code: '2330', name: '台積電', type: '公開市場', exch: 'tse', shares: 30000, costPerShare: 2359.7302, cost: 70791906, price: 2320.00, priceDate: '2026/08/04 收盤', note: '' },
+  { code: '4137', name: '麗豐-KY', type: '公開市場(上市)', exch: 'tse', shares: 10000, costPerShare: 101.8444, cost: 1018444, price: 95.11, priceDate: '2026/08/03 收盤', note: '上市' },
+  { code: '4178', name: '永笙-KY', type: '公開市場(上市)', exch: 'tse', shares: 5658674, costPerShare: 25.4014, cost: 143738145, price: 17.65, priceDate: '2026/08/04 收盤', note: '上市' },
+  { code: '6712', name: '長聖生技', type: '公開市場(上櫃)', exch: 'otc', shares: 13000, costPerShare: 142.1252, cost: 1847628, price: 150.00, priceDate: '⚠ 2026/07/17（資料較舊，建議更新）', note: '上櫃' },
+  { code: '7835', name: '永悅健康-創', type: '公開市場(創新板)', exch: 'tse', shares: 237000, costPerShare: 48.00, cost: 11376000, price: 28.80, priceDate: '2026/08/04 收盤', note: '創新版' },
+  { code: '2330', name: '台積電', type: '公開市場', exch: 'tse', shares: 30000, costPerShare: 2359.7302, cost: 70791906, price: 2320.00, priceDate: '2026/08/04 收盤', note: '上市' },
 ];
 
 function fmt(n, d=0) {
