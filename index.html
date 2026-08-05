@@ -6,61 +6,23 @@
 <title>公開市場持股儀表板</title>
 <style>
   .viz-root {
-    color-scheme: light;
     --surface-1:      #fcfcfb;
     --plane:          #f9f9f7;
     --text-primary:   #0b0b0b;
     --text-secondary: #52514e;
     --text-muted:     #898781;
     --grid:           #e1e0d9;
-    --baseline:       #c3c2b7;
     --border:         rgba(11,11,11,0.10);
     --good-text:      #006300;
-    --series-1: #2a78d6; /* blue */
-    --series-2: #eb6834; /* orange */
-    --series-3: #1baf7a; /* aqua */
-    --series-4: #eda100; /* yellow */
-    --series-5: #e87ba4; /* magenta */
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+    --series-3: #1baf7a;
+    --series-4: #eda100;
+    --series-5: #e87ba4;
     --status-good:     #0ca30c;
     --status-warning:  #fab219;
     --status-serious:  #ec835a;
     --status-critical: #d03b3b;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:where(:not([data-theme="light"])) .viz-root {
-      color-scheme: dark;
-      --surface-1:      #1a1a19;
-      --plane:          #0d0d0d;
-      --text-primary:   #ffffff;
-      --text-secondary: #c3c2b7;
-      --text-muted:     #898781;
-      --grid:           #2c2c2a;
-      --baseline:       #383835;
-      --border:         rgba(255,255,255,0.10);
-      --good-text:      #0ca30c;
-      --series-1: #3987e5;
-      --series-2: #d95926;
-      --series-3: #199e70;
-      --series-4: #c98500;
-      --series-5: #d55181;
-    }
-  }
-  :root[data-theme="dark"] .viz-root {
-    color-scheme: dark;
-    --surface-1:      #1a1a19;
-    --plane:          #0d0d0d;
-    --text-primary:   #ffffff;
-    --text-secondary: #c3c2b7;
-    --text-muted:     #898781;
-    --grid:           #2c2c2a;
-    --baseline:       #383835;
-    --border:         rgba(255,255,255,0.10);
-    --good-text:      #0ca30c;
-    --series-1: #3987e5;
-    --series-2: #d95926;
-    --series-3: #199e70;
-    --series-4: #c98500;
-    --series-5: #d55181;
   }
 
   * { box-sizing: border-box; }
@@ -74,17 +36,10 @@
 
   .topbar { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom: 18px; flex-wrap: wrap; }
   h1 { font-size: 22px; margin: 0 0 4px; }
-  .subtitle { color: var(--text-secondary); font-size: 13px; margin: 0; }
   .theme-toggle {
     border: 1px solid var(--border); background: var(--surface-1); color: var(--text-secondary);
     padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer;
   }
-
-  .banner {
-    background: var(--surface-1); border: 1px solid var(--border); border-left: 4px solid var(--status-warning);
-    border-radius: 10px; padding: 12px 16px; margin-bottom: 22px; font-size: 13px; color: var(--text-secondary); line-height:1.6;
-  }
-  .banner b { color: var(--text-primary); }
 
   .kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
   .top-grid { display: flex; align-items: stretch; gap: 14px; margin-bottom: 24px; }
@@ -96,12 +51,9 @@
   .kpi .label { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
   .kpi .value { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
   .kpi .delta { font-size: 13px; margin-top: 4px; font-variant-numeric: tabular-nums; }
-  .up { color: var(--status-critical); }    /* 台股慣例：漲/正=紅, 跌/負=綠 — 這裡用狀態色標示風險而非漲跌色，見下方說明 */
-  .down { color: var(--good-text); }
   .neg { color: var(--status-critical); }
   .pos { color: var(--good-text); }
 
-  .grid-2 { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; margin-bottom: 24px; }
   .card {
     background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px;
     min-width: 0;
@@ -118,13 +70,6 @@
   #holdingsTable { min-width: 780px; }
   tr:last-child td { border-bottom: none; }
 
-  input.price-input {
-    width: 78px; text-align: right; padding: 5px 6px; border-radius: 6px;
-    border: 1px solid var(--border); background: var(--plane); color: var(--text-primary);
-    font-variant-numeric: tabular-nums; font-size: 13px;
-  }
-  .price-date { display:block; font-size: 10.5px; color: var(--text-muted); margin-top:2px; text-align:right; }
-  .stack-top { }
   .stack-bottom { font-size: 11.5px; margin-top: 4px; }
   .stack-bottom.muted { color: var(--text-secondary); }
 
@@ -138,18 +83,7 @@
   .b-serious .dot { background: var(--status-serious); }
   .b-crit { background: rgba(208,59,59,0.14); color: var(--status-critical); }
   .b-crit .dot { background: var(--status-critical); }
-  @media (prefers-color-scheme: dark) {
-    :root:where(:not([data-theme="light"])) .b-warn { color: #ffd77a; }
-    :root:where(:not([data-theme="light"])) .b-serious { color: #ffb28f; }
-  }
-  :root[data-theme="dark"] .b-warn { color: #ffd77a; }
-  :root[data-theme="dark"] .b-serious { color: #ffb28f; }
 
-  .legend { display:flex; gap:14px; flex-wrap:wrap; margin-top: 14px; font-size: 11.5px; color: var(--text-secondary); }
-  .legend .item { display:flex; align-items:center; gap:6px; }
-  .legend .sw { width:10px; height:10px; border-radius:3px; display:inline-block; }
-
-  .table-toggle { font-size: 11.5px; color: var(--text-secondary); cursor:pointer; text-decoration: underline; }
   footer { margin-top: 26px; font-size: 11.5px; color: var(--text-muted); line-height:1.7; }
 
   .weight-list { display:flex; flex-direction:column; gap:12px; }
@@ -160,7 +94,6 @@
 
   @media (max-width: 900px) {
     .kpi-row { grid-template-columns: repeat(2,1fr); }
-    .grid-2 { grid-template-columns: 1fr; }
     .top-grid { flex-direction: column; }
     .top-grid .card.half { width: 100%; min-width: 0; }
   }
@@ -252,28 +185,23 @@
 
 <script>
 // ---- Data (from 資本市場股票.xlsx, Section B) ----
-// price: 人工查詢之最新現價；priceDate: 該報價的資料時間（來源：Yahoo股市/玉山wantgoo/histock 等看盤網站快照）
+// price：目前顯示的現價，一律由「重新抓取即時報價」寫入，不再提供手動輸入；以下為抓取前的預設值
 const holdings = [
-  { code: '4137', name: '麗豐-KY', type: '上市', exch: 'tse', shares: 10000, costPerShare: 101.8444, cost: 1018444, price: 95.11, priceDate: '2026/08/03 收盤', note: '上市KY股；美容連鎖克麗緹娜；近5年平均殖利率>10%' },
-  { code: '4178', name: '永笙-KY', type: '上市', exch: 'tse', shares: 5658674, costPerShare: 25.4014, cost: 143738145, price: 17.65, priceDate: '2026/08/04 收盤', note: '臍帶血細胞庫；計劃115年Q2升板上市' },
-  { code: '6712', name: '長聖生技', type: '上櫃', exch: 'otc', shares: 13000, costPerShare: 142.1252, cost: 1847628, price: 150.00, priceDate: '⚠ 2026/07/17（資料較舊，建議更新）', note: '上櫃股' },
-  { code: '7835', name: '永悅健康-創', type: '創新板', exch: 'tse', shares: 237000, costPerShare: 48.00, cost: 11376000, price: 28.80, priceDate: '2026/08/04 收盤', note: '2026年7月創新板新掛牌；蜜月行情失靈' },
-  { code: '2330', name: '台積電', type: '上市', exch: 'tse', shares: 30000, costPerShare: 2359.7302, cost: 70791906, price: 2320.00, priceDate: '2026/08/04 收盤', note: '' },
+  { code: '4137', name: '麗豐-KY', type: '上市', exch: 'tse', shares: 10000, costPerShare: 101.8444, cost: 1018444, price: 95.11 },
+  { code: '4178', name: '永笙-KY', type: '上市', exch: 'tse', shares: 5658674, costPerShare: 25.4014, cost: 143738145, price: 17.65 },
+  { code: '6712', name: '長聖生技', type: '上櫃', exch: 'otc', shares: 13000, costPerShare: 142.1252, cost: 1847628, price: 150.00 },
+  { code: '7835', name: '永悅健康-創', type: '創新板', exch: 'tse', shares: 237000, costPerShare: 48.00, cost: 11376000, price: 28.80 },
+  { code: '2330', name: '台積電', type: '上市', exch: 'tse', shares: 30000, costPerShare: 2359.7302, cost: 70791906, price: 2320.00 },
 ];
 
 function fmt(n, d=0) {
   return n.toLocaleString('zh-TW', { minimumFractionDigits: d, maximumFractionDigits: d });
 }
-// 簡短時間格式，例如「8/5 13:10」（不含年、不含秒）
-function shortTimeNow() {
-  const now = new Date();
-  return `${now.getMonth() + 1}/${now.getDate()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-}
 function signalFor(pct) {
   if (pct <= -20) return { cls: 'b-crit', label: '建議檢視停損' };
   if (pct <= -10) return { cls: 'b-warn', label: '留意觀察' };
   if (pct >= 20) return { cls: 'b-good', label: '可評估獲利了結' };
-  return { cls: 'b-serious b-hold', label: '持有' };
+  return { cls: 'b-serious', label: '持有' };
 }
 
 function computeAndRender() {
@@ -300,7 +228,7 @@ function computeAndRender() {
   `;
 
   // Holdings table
-  document.getElementById('holdingsBody').innerHTML = rows.map((r, i) => {
+  document.getElementById('holdingsBody').innerHTML = rows.map(r => {
     const sig = signalFor(r.plPct);
     return `
     <tr>
@@ -308,10 +236,7 @@ function computeAndRender() {
       <td>${fmt(r.shares)}</td>
       <td>
         <div class="stack-top">${fmt(r.costPerShare,2)}</div>
-        <div class="stack-bottom">
-          <input class="price-input" type="number" step="0.01" value="${r.price}" data-idx="${i}" onchange="onPriceChange(event)">
-          <span class="price-date">${r.priceDate}</span>
-        </div>
+        <div class="stack-bottom">${fmt(r.price,2)}</div>
       </td>
       <td>
         <div class="stack-top ${r.pl>=0?'pos':'neg'}">${r.pl>=0?'+':''}${fmt(r.pl)}</div>
@@ -342,16 +267,6 @@ function renderWeightList(sortedRows) {
       <span class="pname">${row.name}</span>
       <span class="ppct">${fmt(row.weight,1)}%</span>
     </div>`).join('');
-}
-
-function onPriceChange(e) {
-  const idx = Number(e.target.dataset.idx);
-  const val = parseFloat(e.target.value);
-  if (!isNaN(val) && val >= 0) {
-    holdings[idx].price = val;
-    holdings[idx].priceDate = '手動更新';
-  }
-  computeAndRender();
 }
 
 // ---- 即時報價抓取 ----
@@ -416,7 +331,7 @@ function parsePrice(item) {
   return isNaN(y) ? null : y;
 }
 
-async function tryMisRealtime(status) {
+async function tryMisRealtime() {
   const found = new Set();
   // 第一輪：依資料表既有的市場猜測（上市 tse / 上櫃 otc）
   const primaryList = holdings.map(h => buildExCh(h.exch, h.code));
@@ -427,7 +342,6 @@ async function tryMisRealtime(status) {
     const p = parsePrice(item);
     if (p !== null) {
       h.price = p;
-      h.priceDate = '即時（' + shortTimeNow() + '）';
       found.add(h.code);
     }
   });
@@ -444,7 +358,6 @@ async function tryMisRealtime(status) {
       if (p !== null) {
         h.price = p;
         h.exch = h.exch === 'tse' ? 'otc' : 'tse'; // 記住猜對的市場，下次直接用
-        h.priceDate = '即時（' + shortTimeNow() + '）';
         found.add(h.code);
       }
     });
@@ -463,7 +376,6 @@ async function tryTwseCloseFallback(alreadyFound) {
     const close = parseFloat((row.ClosingPrice || '').replace(/,/g, ''));
     if (!isNaN(close)) {
       h.price = close;
-      h.priceDate = '⚠ 前一交易日收盤（官方OpenAPI備援，非盤中即時）';
       found.add(h.code);
     }
   });
@@ -481,7 +393,6 @@ async function tryTpexCloseFallback(alreadyFound) {
     const close = parseFloat(String(row.Close || '').replace(/,/g, ''));
     if (!isNaN(close)) {
       h.price = close;
-      h.priceDate = '⚠ 前一交易日收盤（櫃買中心OpenAPI備援，非盤中即時）';
       found.add(h.code);
     }
   });
@@ -500,7 +411,7 @@ async function fetchLivePrices() {
   const closeErrors = [];
 
   try {
-    found = await tryMisRealtime(status);
+    found = await tryMisRealtime();
   } catch (err) {
     misError = err.message;
   }
@@ -532,14 +443,13 @@ async function fetchLivePrices() {
   if (!stillMissing.length) {
     status.textContent = `已更新全部 ${holdings.length} 檔　（${new Date().toLocaleTimeString('zh-TW', { hour12: false })}）`;
   } else if (found.size > 0) {
-    status.textContent = `已更新 ${found.size}/${holdings.length} 檔；${stillMissing.join('、')} 抓取失敗，請手動輸入現價。`;
+    status.textContent = `已更新 ${found.size}/${holdings.length} 檔；${stillMissing.join('、')} 抓取失敗，暫顯示上次已知價格。`;
   } else {
-    status.textContent = '自動拓取失敗，請改用「現價」欄位手動輸入（開發者工具主控台有完整錯誤細節）。';
+    status.textContent = '自動抓取失敗，暫顯示上次已知價格，請稍後點擊重新抓取（開發者工具主控台有完整錯誤細節）。';
   }
   console.error('MIS error:', misError, 'Close-fallback error:', closeError);
   btn.disabled = false;
 }
-
 
 computeAndRender();
 
