@@ -124,6 +124,9 @@
     font-variant-numeric: tabular-nums; font-size: 13px;
   }
   .price-date { display:block; font-size: 10.5px; color: var(--text-muted); margin-top:2px; text-align:right; }
+  .stack-top { }
+  .stack-bottom { font-size: 11.5px; margin-top: 4px; }
+  .stack-bottom.muted { color: var(--text-secondary); }
 
   .badge { display: inline-flex; align-items:center; gap:5px; padding: 3px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
   .badge .dot { width:7px; height:7px; border-radius:50%; display:inline-block; }
@@ -230,11 +233,9 @@
         <tr>
           <th>股票</th>
           <th>持股數</th>
-          <th>每股成本</th>
-          <th>現價</th>
-          <th>投資成本(NT$)</th>
-          <th>未實現損益(NT$)</th>
-          <th>損益%</th>
+          <th>每股成本／現價</th>
+          <th>未實現損益(NT$)／損益%</th>
+          <th>成本／市值</th>
           <th>訊號</th>
         </tr>
       </thead>
@@ -305,14 +306,21 @@ function computeAndRender() {
     <tr>
       <td class="name">${r.name}<br><span style="font-size:11px;color:var(--text-muted);font-weight:400;">${r.code}</span><br><span style="font-size:11px;color:var(--text-muted);font-weight:400;">${r.type}</span></td>
       <td>${fmt(r.shares)}</td>
-      <td>${fmt(r.costPerShare,2)}</td>
       <td>
-        <input class="price-input" type="number" step="0.01" value="${r.price}" data-idx="${i}" onchange="onPriceChange(event)">
-        <span class="price-date">${r.priceDate}</span>
+        <div class="stack-top">${fmt(r.costPerShare,2)}</div>
+        <div class="stack-bottom">
+          <input class="price-input" type="number" step="0.01" value="${r.price}" data-idx="${i}" onchange="onPriceChange(event)">
+          <span class="price-date">${r.priceDate}</span>
+        </div>
       </td>
-      <td>${fmt(r.cost)}</td>
-      <td class="${r.pl>=0?'pos':'neg'}">${r.pl>=0?'+':''}${fmt(r.pl)}</td>
-      <td class="${r.plPct>=0?'pos':'neg'}">${r.plPct>=0?'+':''}${fmt(r.plPct,1)}%</td>
+      <td>
+        <div class="stack-top ${r.pl>=0?'pos':'neg'}">${r.pl>=0?'+':''}${fmt(r.pl)}</div>
+        <div class="stack-bottom ${r.plPct>=0?'pos':'neg'}">${r.plPct>=0?'+':''}${fmt(r.plPct,1)}%</div>
+      </td>
+      <td>
+        <div class="stack-top">${fmt(r.cost)}</div>
+        <div class="stack-bottom muted">${fmt(r.fv)}</div>
+      </td>
       <td><span class="badge ${sig.cls}"><span class="dot"></span>${sig.label}</span></td>
     </tr>`;
   }).join('');
