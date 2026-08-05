@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>公開市場持股儀表板</title>
+<style>
+  .viz-root {
+    color-scheme: light;
+    --surface-1:      #fcfcfb;
+    --plane:          #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --grid:           #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    --good-text:      #006300;
+    --series-1: #2a78d6; /* blue */
+    --series-2: #eb6834; /* orange */
+    --series-3: #1baf7a; /* aqua */
+    --series-4: #eda100; /* yellow */
+    --series-5: #e87ba4; /* magenta */
+    --status-good:     #0ca30c;
+    --status-warning:  #fab219;
+    --status-serious:  #ec835a;
+    --status-critical: #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .viz-root {
+      color-scheme: dark;
+      --surface-1:      #1a1a19;
+      --plane:          #0d0d0d;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --grid:           #2c2c2a;
+      --baseline:       #383835;
+      --border:         rgba(255,255,255,0.10);
+      --good-text:      #0ca30c;
+      --series-1: #3987e5;
+      --series-2: #d95926;
+      --series-3: #199e70;
+      --series-4: #c98500;
+      --series-5: #d55181;
+    }
+  }
+  :root[data-theme="dark"] .viz-root {
+    color-scheme: dark;
+    --surface-1:      #1a1a19;
+    --plane:          #0d0d0d;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+    --grid:           #2c2c2a;
+    --baseline:       #383835;
+    --border:         rgba(255,255,255,0.10);
+    --good-text:      #0ca30c;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--plane);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans TC", sans-serif;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 20px 60px; }
+
+  .topbar { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom: 18px; flex-wrap: wrap; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .subtitle { color: var(--text-secondary); font-size: 13px; margin: 0; }
+  .theme-toggle {
+    border: 1px solid var(--border); background: var(--surface-1); color: var(--text-secondary);
+    padding: 6px 12px; border-radius: 8px; font-size: 12px; cursor: pointer;
+  }
+
+  .banner {
+    background: var(--surface-1); border: 1px solid var(--border); border-left: 4px solid var(--status-warning);
+    border-radius: 10px; padding: 12px 16px; margin-bottom: 22px; font-size: 13px; color: var(--text-secondary); line-height:1.6;
+  }
+  .banner b { color: var(--text-primary); }
+
+  .kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .top-grid { display: flex; align-items: stretch; gap: 14px; margin-bottom: 24px; }
+  .top-grid .kpi-row { flex: 2 1 0%; min-width: 0; }
+  .top-grid .card.half { flex: 1 1 0%; margin-bottom: 0; min-width: 260px; }
+  .kpi {
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px;
+  }
+  .kpi .label { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
+  .kpi .value { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .kpi .delta { font-size: 13px; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .up { color: var(--status-critical); }    /* 台股慣例：漲/正=紅, 跌/負=綠 — 這裡用狀態色標示風險而非漲跌色，見下方說明 */
+  .down { color: var(--good-text); }
+  .neg { color: var(--status-critical); }
+  .pos { color: var(--good-text); }
+
+  .grid-2 { display: grid; grid-template-columns: 1.3fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .card {
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px;
+    min-width: 0;
+  }
+  .card h2 { font-size: 15px; margin: 0 0 14px; }
+  .card .cap { font-size: 12px; color: var(--text-muted); margin-top: 10px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 9px 8px; text-align: right; border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  th { color: var(--text-secondary); font-weight: 500; font-size: 12px; text-align: right; }
+  th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
+  td.name { font-weight: 600; }
+  td.note { color: var(--text-muted); font-size: 11.5px; text-align: left; white-space: normal; min-width: 190px; max-width: 240px; }
+  .table-scroll { overflow-x: auto; }
+  #holdingsTable { min-width: 1080px; }
+  tr:last-child td { border-bottom: none; }
+
+  input.price-input {
+    width: 78px; text-align: right; padding: 5px 6px; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--plane); color: var(--text-primary);
+    font-variant-numeric: tabular-nums; font-size: 13px;
+  }
+  .price-date { display:block; font-size: 10.5px; color: var(--text-muted); margin-top:2px; text-align:right; }
+
+  .badge { display: inline-flex; align-items:center; gap:5px; padding: 3px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+  .badge .dot { width:7px; height:7px; border-radius:50%; display:inline-block; }
+  .b-good { background: rgba(12,163,12,0.12); color: var(--good-text); }
+  .b-good .dot { background: var(--status-good); }
+  .b-warn { background: rgba(250,178,25,0.16); color: #8a5a00; }
+  .b-warn .dot { background: var(--status-warning); }
+  .b-serious { background: rgba(236,131,90,0.16); color: #8a3a1a; }
+  .b-serious .dot { background: var(--status-serious); }
+  .b-crit { background: rgba(208,59,59,0.14); color: var(--status-critical); }
+  .b-crit .dot { background: var(--status-critical); }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .b-warn { color: #ffd77a; }
+    :root:where(:not([data-theme="light"])) .b-serious { color: #ffb28f; }
+  }
+  :root[data-theme="dark"] .b-warn { color: #ffd77a; }
+  :root[data-theme="dark"] .b-serious { color: #ffb28f; }
+
+  .legend { display:flex; gap:14px; flex-wrap:wrap; margin-top: 14px; font-size: 11.5px; color: var(--text-secondary); }
+  .legend .item { display:flex; align-items:center; gap:6px; }
+  .legend .sw { width:10px; height:10px; border-radius:3px; display:inline-block; }
+
+  .table-toggle { font-size: 11.5px; color: var(--text-secondary); cursor:pointer; text-decoration: underline; }
+  footer { margin-top: 26px; font-size: 11.5px; color: var(--text-muted); line-height:1.7; }
+
+  .weight-list { display:flex; flex-direction:column; gap:12px; }
+  .weight-list .item { display:flex; align-items:center; gap:10px; font-size:14px; }
+  .weight-list .sw { width:12px; height:12px; border-radius:3px; flex-shrink:0; }
+  .weight-list .pname { color: var(--text-primary); }
+  .weight-list .ppct { font-weight:600; font-variant-numeric: tabular-nums; margin-left:auto; }
+
+  @media (max-width: 900px) {
+    .kpi-row { grid-template-columns: repeat(2,1fr); }
+    .grid-2 { grid-template-columns: 1fr; }
+    .top-grid { flex-direction: column; }
+    .top-grid .card.half { width: 100%; min-width: 0; }
+  }
+  @media (max-width: 600px) {
+    .top-grid .kpi-row { grid-template-columns: 1fr; }
+  }
+
+  .lock-screen {
+    position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center;
+    background: #0d0d0d; color: #ffffff; font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans TC", sans-serif;
+  }
+  .lock-card { width: 100%; max-width: 320px; padding: 32px 28px; text-align: center; }
+  .lock-card h1 { font-size: 17px; margin: 0 0 6px; }
+  .lock-card p { font-size: 12.5px; color: #a9a9a4; margin: 0 0 20px; line-height:1.6; }
+  .lock-card input {
+    width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.15);
+    background: #1a1a19; color: #fff; font-size: 15px; text-align: center; letter-spacing: 2px; margin-bottom: 12px;
+    box-sizing: border-box;
+  }
+  .lock-card button {
+    width: 100%; padding: 10px 12px; border-radius: 8px; border: none; background: #2a78d6; color: #fff;
+    font-size: 14px; cursor: pointer; font-weight: 600;
+  }
+  .lock-card .lock-error { color: #e66767; font-size: 12.5px; margin-top: 10px; min-height: 16px; }
+  body.unlocked .lock-screen { display: none; }
+  body:not(.unlocked) .viz-root { display: none; }
+</style>
+</head>
+<body>
+
+<div class="lock-screen" id="lockScreen">
+  <div class="lock-card">
+    <h1>公開市場持股儀表板</h1>
+    <p>本頁含公司內部財務資料，僅供授權人員查閱。<br>請輸入密碼繼續。</p>
+    <input type="password" id="lockPassword" placeholder="請輸入密碼" autocomplete="off" onkeydown="if(event.key==='Enter') checkLockPassword()">
+    <button onclick="checkLockPassword()">確認</button>
+    <div class="lock-error" id="lockError"></div>
+  </div>
+</div>
+
+<div class="viz-root">
+<div class="wrap">
+
+  <div class="topbar">
+    <div>
+      <h1>公開市場財務性投資 — 持股儀表板</h1>
+      <p class="subtitle">資料來源：資本市場股票.xlsx（Section B）　可點擊「重新抓取即時報價」自動更新，或直接手動輸入現價</p>
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme()">切換淺色／深色</button>
+  </div>
+
+  <div class="banner">
+    <b>提醒：</b>下方「重新抓取即時報價」會呼叫證交所／櫃買中心供其看盤網頁使用的公開端點（透過第三方 CORS 代理），
+    盤中約每 5 秒更新一次，<b>但這不是官方正式文件化的 API</b>，可能因代理服務、對方端點改版或流量限制而暫時失敗——
+    失敗時請直接在「現價」欄位手動輸入最新價格，儀表板會即時重新計算公允價值與損益。正式做買賣決策前，
+    仍建議以券商看盤軟體或官方公告再次核對價格。
+  </div>
+
+  <div class="top-grid">
+    <div class="kpi-row" id="kpiRow"></div>
+
+    <div class="card half">
+      <h2>各股佔投資組合比重（依公允價值）</h2>
+      <div class="weight-list" id="weightList"></div>
+      <p class="cap" id="concentrationNote"></p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:24px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+      <h2 style="margin:0;">持股明細與買賣訊號</h2>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span id="fetchStatus" style="font-size:11.5px; color:var(--text-muted);"></span>
+        <button class="theme-toggle" id="fetchBtn" onclick="fetchLivePrices()">重新抓取即時報價</button>
+      </div>
+    </div>
+    <div class="table-scroll">
+    <table id="holdingsTable">
+      <thead>
+        <tr>
+          <th>股票</th>
+          <th>持股數</th>
+          <th>每股成本</th>
+          <th>現價</th>
+          <th>投資成本(NT$)</th>
+          <th>未實現損益(NT$)</th>
+          <th>損益%</th>
+          <th>訊號</th>
+          <th>備註</th>
+        </tr>
+      </thead>
+      <tbody id="holdingsBody"></tbody>
+    </table>
+    </div>
+    <p class="cap">訊號規則：損益 ≤ −20% 標示「建議檢視停損」；−20%〜−10% 標示「留意觀察」；−10%〜+20% 標示「持有」；≥ +20% 標示「可評估獲利了結」。門檁值可依老闆風險偏好調整。</p>
+  </div>
+
+  <footer id="totalsFooter"></footer>
+
+</div>
+</div>
+
+<script>
+// ---- Data (from 資本市場股票.xlsx, Section B) ----
+// price: 人工查詢之最新現價；priceDate: 該報價的資料時間（來源：Yahoo股市/玉山wantgoo/histock 等看盤網站快照）
+const holdings = [
+  { code: '4137', name: '麗豐-KY', type: '公開市場(上市)', exch: 'tse', shares: 10000, costPerShare: 101.8444, cost: 1018444, price: 95.11, priceDate: '2026/08/03 收盤', note: '上市KY股；美容連鎖克麗緹娜；近5年平均殖利率>10%' },
+  { code: '4178', name: '永笙-KY', type: '公開市場(上市)', exch: 'tse', shares: 5658674, costPerShare: 25.4014, cost: 143738145, price: 17.65, priceDate: '2026/08/04 收盤', note: '臍帶血細胞庫；計劃115年Q2升板上市' },
+  { code: '6712', name: '長聖生技', type: '公開市場(上櫃)', exch: 'otc', shares: 13000, costPerShare: 142.1252, cost: 1847628, price: 150.00, priceDate: '⚠ 2026/07/17（資料較舊，建議更新）', note: '上櫃股' },
+  { code: '7835', name: '永悅健康-創', type: '公開市場(創新板)', exch: 'tse', shares: 237000, costPerShare: 48.00, cost: 11376000, price: 28.80, priceDate: '2026/08/04 收盤', note: '2026年7月創新板新掛牌；蜜月行情失靈' },
+  { code: '2330', name: '台積電', type: '公開市場', exch: 'tse', shares: 30000, costPerShare: 2359.7302, cost: 70791906, price: 2320.00, priceDate: '2026/08/04 收盤', note: '' },
+];
+
+function fmt(n, d=0) {
+  return n.toLocaleString('zh-TW', { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+function signalFor(pct) {
+  if (pct <= -20) return { cls: 'b-crit', label: '建議檢視停損' };
+  if (pct <= -10) return { cls: 'b-warn', label: '留意觀察' };
+  if (pct >= 20) return { cls: 'b-good', label: '可評估獲利了結' };
+  return { cls: 'b-serious b-hold', label: '持有' };
+}
+
+function computeAndRender() {
+  let totalCost = 0, totalFV = 0;
+  const rows = holdings.map(h => {
+    const fv = h.shares * h.price;
+    const pl = fv - h.cost;
+    const plPct = h.cost !== 0 ? (pl / h.cost) * 100 : 0;
+    totalCost += h.cost;
+    totalFV += fv;
+    return { ...h, fv, pl, plPct };
+  });
+  rows.forEach(r => { r.weight = totalFV !== 0 ? (r.fv / totalFV) * 100 : 0; });
+
+  const totalPL = totalFV - totalCost;
+  const totalPLPct = totalCost !== 0 ? (totalPL / totalCost) * 100 : 0;
+  const maxWeight = rows.reduce((a,b) => b.weight > a.weight ? b : a, rows[0]);
+
+  // KPI cards
+  document.getElementById('kpiRow').innerHTML = `
+    <div class="kpi"><div class="label">總投資成本(NT$)</div><div class="value">${fmt(totalCost)}</div></div>
+    <div class="kpi"><div class="label">總公允價值(NT$)</div><div class="value">${fmt(totalFV)}</div></div>
+    <div class="kpi"><div class="label">總未實現損益(NT$)</div><div class="value ${totalPL>=0?'pos':'neg'}">${totalPL>=0?'+':''}${fmt(totalPL)}</div>
+      <div class="delta ${totalPL>=0?'pos':'neg'}">${totalPL>=0?'+':''}${fmt(totalPLPct,1)}%</div></div>
+  `;
+
+  // Holdings table
+  document.getElementById('holdingsBody').innerHTML = rows.map((r, i) => {
+    const sig = signalFor(r.plPct);
+    const noteText = [r.type, r.note].filter(Boolean).join('；');
+    return `
+    <tr>
+      <td class="name">${r.name}<br><span style="font-size:11px;color:var(--text-muted);font-weight:400;">${r.code}</span></td>
+      <td>${fmt(r.shares)}</td>
+      <td>${fmt(r.costPerShare,2)}</td>
+      <td>
+        <input class="price-input" type="number" step="0.01" value="${r.price}" data-idx="${i}" onchange="onPriceChange(event)">
+        <span class="price-date">${r.priceDate}</span>
+      </td>
+      <td>${fmt(r.cost)}</td>
+      <td class="${r.pl>=0?'pos':'neg'}">${r.pl>=0?'+':''}${fmt(r.pl)}</td>
+      <td class="${r.plPct>=0?'pos':'neg'}">${r.plPct>=0?'+':''}${fmt(r.plPct,1)}%</td>
+      <td><span class="badge ${sig.cls}"><span class="dot"></span>${sig.label}</span></td>
+      <td class="note">${noteText || '—'}</td>
+    </tr>`;
+  }).join('');
+
+  // 各股佔投資組合比重（依公允價值），依比重排序，固定順位色階
+  renderWeightList([...rows].sort((a,b) => b.weight - a.weight));
+  document.getElementById('concentrationNote').textContent =
+    maxWeight.weight >= 40
+      ? `集中度風險提醒：${maxWeight.name} 佔整體公開市場投資組合 ${fmt(maxWeight.weight,1)}%，單一標的集中度偏高。`
+      : `目前最大單一持股佔比為 ${fmt(maxWeight.weight,1)}%（${maxWeight.name}），集中度尚在可控範圍，仍建議持續留意。`;
+
+  document.getElementById('totalsFooter').innerHTML =
+    `資料表小計（投資成本）：NT$ ${fmt(totalCost)}　｜　依現價計算之總公允價值：NT$ ${fmt(totalFV)}　｜　`+
+    `總未實現損益：${totalPL>=0?'+':''}NT$ ${fmt(totalPL)}（${totalPL>=0?'+':''}${fmt(totalPLPct,1)}%）<br>`+
+    `本儀表板僅供內部決策參考，現價與損益數字之準確性取決於「現價」欄位是否為最新市價，請定期核對更新。`;
+}
+
+// 各股佔投資組合比重（依公允價值）清單。固定順位配色（identity），以色塊圖示＋名稱＋百分比呈現
+const PIE_COLORS = ['var(--series-1)','var(--series-2)','var(--series-3)','var(--series-4)','var(--series-5)'];
+
+function renderWeightList(sortedRows) {
+  document.getElementById('weightList').innerHTML = sortedRows.map((row, i) => `
+    <div class="item">
+      <span class="sw" style="background:${PIE_COLORS[i % PIE_COLORS.length]}"></span>
+      <span class="pname">${row.name}</span>
+      <span class="ppct">${fmt(row.weight,1)}%</span>
+    </div>`).join('');
+}
+
+function onPriceChange(e) {
+  const idx = Number(e.target.dataset.idx);
+  const val = parseFloat(e.target.value);
+  if (!isNaN(val) && val >= 0) {
+    holdings[idx].price = val;
+    holdings[idx].priceDate = '手動更新';
+  }
+  computeAndRender();
+}
+
+// ---- 即時報價抓取 ----
+// 主要來源：證交所/櫃買中心供其看盤網頁使用的公開端點 mis.twse.com.tw（非正式文件化 API，盤中約每 5 秒更新一次）。
+// 因為瀏覽器直接呼叫會被 CORS 擋掉，依序嘗試「不經代理」「多個公開 CORS 代理」；
+// 若這條路徑全部失敗，改用證交所官方 OpenAPI 的前一交易日收盤價當備援（僅涵蓋上市股票）。
+// 每一步失敗都會記錄原始錯誤訊息，全部失敗時會顯示在畫面上，方便回報除錯。
+const MIS_BASE = 'https://mis.twse.com.tw/stock/api/getStockInfo.jsp';
+const TWSE_CLOSE_BASE = 'https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL';
+const TPEX_CLOSE_BASE = 'https://www.tpex.org.tw/openapi/v1/tpex_mainboard_daily_close_quotes';
+
+// 自己架的專用轉接服務（Cloudflare Worker），只轉發到證交所/櫃買中心這幾個官方端點，比公用免費代理穩定
+const OWN_PROXY = 'https://weathered-block-f8bd.chiehyu-peng.workers.dev';
+
+// 依序嘗試的請求方式：(url) => 實際 fetch 用的 URL。第一個是不經代理的直接呼叫，
+// 第二個是自己的專用轉接服務，後面幾個公用免費代理只當最後備援。
+const FETCH_STRATEGIES = [
+  url => url,
+  url => OWN_PROXY + '/?url=' + encodeURIComponent(url),
+  url => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
+  url => 'https://corsproxy.io/?url=' + encodeURIComponent(url),
+  url => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url),
+];
+
+function buildExCh(prefix, code) { return `${prefix}_${code}.tw`; }
+
+// 依序嘗試每一種請求方式，直到拿到可解析的 JSON 為止；全部失敗則拋出彙整過的錯誤訊息。
+async function fetchJsonWithFallback(url, timeoutMs = 8000) {
+  const errors = [];
+  for (const strategy of FETCH_STRATEGIES) {
+    const attemptUrl = strategy(url);
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      const res = await fetch(attemptUrl, { cache: 'no-store', signal: controller.signal });
+      clearTimeout(timer);
+      if (!res.ok) { errors.push(`${attemptUrl.slice(0,60)}… → HTTP ${res.status}`); continue; }
+      const text = await res.text();
+      try {
+        return JSON.parse(text);
+      } catch (parseErr) {
+        errors.push(`${attemptUrl.slice(0,60)}… → 回應非 JSON（可能被代理擋掉或回傳 HTML）`);
+        continue;
+      }
+    } catch (err) {
+      errors.push(`${attemptUrl.slice(0,60)}… → ${err.name}: ${err.message}`);
+    }
+  }
+  throw new Error(errors.join(' ｜ '));
+}
+
+async function fetchMis(exChList) {
+  const target = `${MIS_BASE}?ex_ch=${exChList.join('|')}&json=1&delay=0&_=${Date.now()}`;
+  return fetchJsonWithFallback(target);
+}
+
+function parsePrice(item) {
+  // z = 最新成交價；若當日尚無成交（z 為 '-')，退回昨收 y
+  const z = parseFloat(item.z);
+  if (!isNaN(z) && item.z !== '-') return z;
+  const y = parseFloat(item.y);
+  return isNaN(y) ? null : y;
+}
+
+async function tryMisRealtime(status) {
+  const found = new Set();
+  // 第一輪：依資料表既有的市場猜測（上市 tse / 上櫃 otc）
+  const primaryList = holdings.map(h => buildExCh(h.exch, h.code));
+  const data = await fetchMis(primaryList);
+  (data.msgArray || []).forEach(item => {
+    const h = holdings.find(x => x.code === item.c);
+    if (!h) return;
+    const p = parsePrice(item);
+    if (p !== null) {
+      h.price = p;
+      h.priceDate = '即時（' + new Date().toLocaleString('zh-TW', { hour12: false }) + '）';
+      found.add(h.code);
+    }
+  });
+
+  // 第二輪：市場猜測錯的股票（例如上市/上櫃判斷相反），改用另一個字首重試
+  const missing = holdings.filter(h => !found.has(h.code));
+  if (missing.length) {
+    const retryList = missing.map(h => buildExCh(h.exch === 'tse' ? 'otc' : 'tse', h.code));
+    const retryData = await fetchMis(retryList);
+    (retryData.msgArray || []).forEach(item => {
+      const h = holdings.find(x => x.code === item.c);
+      if (!h) return;
+      const p = parsePrice(item);
+      if (p !== null) {
+        h.price = p;
+        h.exch = h.exch === 'tse' ? 'otc' : 'tse'; // 記住猜對的市場，下次直接用
+        h.priceDate = '即時（' + new Date().toLocaleString('zh-TW', { hour12: false }) + '）';
+        found.add(h.code);
+      }
+    });
+  }
+  return found;
+}
+
+async function tryTwseCloseFallback(alreadyFound) {
+  // 官方 OpenAPI 只有「前一交易日收盤價」、且只涵蓋上市股票，作為 MIS 即時來源全部失敗時的備援
+  const data = await fetchJsonWithFallback(TWSE_CLOSE_BASE);
+  const found = new Set();
+  const rows = Array.isArray(data) ? data : [];
+  holdings.filter(h => !alreadyFound.has(h.code)).forEach(h => {
+    const row = rows.find(r => r.Code === h.code);
+    if (!row) return;
+    const close = parseFloat((row.ClosingPrice || '').replace(/,/g, ''));
+    if (!isNaN(close)) {
+      h.price = close;
+      h.priceDate = '⚠ 前一交易日收盤（官方OpenAPI備援，非盤中即時）';
+      found.add(h.code);
+    }
+  });
+  return found;
+}
+
+async function tryTpexCloseFallback(alreadyFound) {
+  // 櫃買中心官方 OpenAPI，涵蓋上櫃股票的「前一交易日收盤價」
+  const data = await fetchJsonWithFallback(TPEX_CLOSE_BASE);
+  const found = new Set();
+  const rows = Array.isArray(data) ? data : [];
+  holdings.filter(h => !alreadyFound.has(h.code)).forEach(h => {
+    const row = rows.find(r => r.SecuritiesCompanyCode === h.code);
+    if (!row) return;
+    const close = parseFloat(String(row.Close || '').replace(/,/g, ''));
+    if (!isNaN(close)) {
+      h.price = close;
+      h.priceDate = '⚠ 前一交易日收盤（櫃買中心OpenAPI備援，非盤中即時）';
+      found.add(h.code);
+    }
+  });
+  return found;
+}
+
+async function fetchLivePrices() {
+  const btn = document.getElementById('fetchBtn');
+  const status = document.getElementById('fetchStatus');
+  btn.disabled = true;
+  status.textContent = '抓取中…';
+
+  let found = new Set();
+  let misError = null;
+  let closeError = null;
+  const closeErrors = [];
+
+  try {
+    found = await tryMisRealtime(status);
+  } catch (err) {
+    misError = err.message;
+  }
+
+  const stillMissingAfterMis = holdings.filter(h => !found.has(h.code));
+  if (stillMissingAfterMis.length) {
+    try {
+      const closeFound = await tryTwseCloseFallback(found);
+      closeFound.forEach(c => found.add(c));
+    } catch (err) {
+      closeErrors.push('證交所：' + err.message);
+    }
+  }
+
+  const stillMissingAfterTwse = holdings.filter(h => !found.has(h.code));
+  if (stillMissingAfterTwse.length) {
+    try {
+      const otcFound = await tryTpexCloseFallback(found);
+      otcFound.forEach(c => found.add(c));
+    } catch (err) {
+      closeErrors.push('櫃買中心：' + err.message);
+    }
+  }
+  closeError = closeErrors.length ? closeErrors.join(' ｜ ') : null;
+
+  computeAndRender();
+  const stillMissing = holdings.filter(h => !found.has(h.code)).map(h => h.name);
+
+  if (!stillMissing.length) {
+    status.textContent = `已更新全部 ${holdings.length} 檔　（${new Date().toLocaleTimeString('zh-TW', { hour12: false })}）`;
+  } else if (found.size > 0) {
+    status.textContent = `已更新 ${found.size}/${holdings.length} 檔；${stillMissing.join('、')} 抓取失敗，請手動輸入現價。`;
+  } else {
+    status.textContent = '自動拓取失敗，請改用「現價」欄位手動輸入（開發者工具主控台有完整錯誤細節）。';
+  }
+  console.error('MIS error:', misError, 'Close-fallback error:', closeError);
+  btn.disabled = false;
+}
+
+function toggleTheme() {
+  const root = document.documentElement;
+  const current = root.getAttribute('data-theme');
+  if (current === 'dark') root.setAttribute('data-theme', 'light');
+  else if (current === 'light') root.removeAttribute('data-theme');
+  else root.setAttribute('data-theme', 'dark');
+}
+
+computeAndRender();
+
+// ---- 密碼關卡 ----
+// 密碼本身不會出現在原始碼裡，只存單向 SHA-256 雜湊值；但雜湊值本身仍寫在網頁裡，任何人都能看到並嘗試離線破解，
+// 這只能擋掉不知情的一般訪客，不是真正的存取控制。若需要「只有特定人能看」的強度，建議改用有帳號驗證的方案。
+const LOCK_HASH = '5aa1a610834eacb1d10014dc4f0c08992139c5d5708de4678bb34bd6848749b6';
+
+async function sha256Hex(text) {
+  const data = new TextEncoder().encode(text);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function checkLockPassword() {
+  const input = document.getElementById('lockPassword');
+  const errorEl = document.getElementById('lockError');
+  const hash = await sha256Hex(input.value);
+  if (hash === LOCK_HASH) {
+    document.body.classList.add('unlocked');
+  } else {
+    errorEl.textContent = '密碼不正確，請再試一次。';
+    input.value = '';
+    input.focus();
+  }
+}
+
+document.getElementById('lockPassword').focus();
+</script>
+</body>
+</html>
