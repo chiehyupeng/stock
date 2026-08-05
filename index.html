@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-Hant" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -114,9 +114,8 @@
   th { color: var(--text-secondary); font-weight: 500; font-size: 12px; text-align: right; }
   th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
   td.name { font-weight: 600; }
-  td.note { color: var(--text-muted); font-size: 11.5px; text-align: left; white-space: normal; min-width: 190px; max-width: 240px; }
   .table-scroll { overflow-x: auto; }
-  #holdingsTable { min-width: 1080px; }
+  #holdingsTable { min-width: 780px; }
   tr:last-child td { border-bottom: none; }
 
   input.price-input {
@@ -206,7 +205,6 @@
     <div>
       <h1>公開市場財務性投資 — 持股儀表板</h1>
     </div>
-    <button class="theme-toggle" onclick="toggleTheme()">切換淺色／深色</button>
   </div>
 
   <div class="top-grid">
@@ -215,7 +213,6 @@
     <div class="card half">
       <h2>各股佔投資組合比重（依公允價值）</h2>
       <div class="weight-list" id="weightList"></div>
-      <p class="cap" id="concentrationNote"></p>
     </div>
   </div>
 
@@ -239,7 +236,6 @@
           <th>未實現損益(NT$)</th>
           <th>損益%</th>
           <th>訊號</th>
-          <th>備註</th>
         </tr>
       </thead>
       <tbody id="holdingsBody"></tbody>
@@ -254,18 +250,23 @@
 </div>
 
 <script>
-
+// ---- Data (from 資本市場股票.xlsx, Section B) ----
 // price: 人工查詢之最新現價；priceDate: 該報價的資料時間（來源：Yahoo股市/玉山wantgoo/histock 等看盤網站快照）
 const holdings = [
-  { code: '4137', name: '麗豐-KY',  exch: 'tse', shares: 10000, costPerShare: 101.8444, cost: 1018444, price: 95.11, priceDate: '2026/08/03 收盤', note: '上市' },
-  { code: '4178', name: '永笙-KY',  exch: 'tse', shares: 5658674, costPerShare: 25.4014, cost: 143738145, price: 17.65, priceDate: '2026/08/04 收盤', note: '上市' },
-  { code: '6712', name: '長聖生技',  exch: 'otc', shares: 13000, costPerShare: 142.1252, cost: 1847628, price: 150.00, priceDate: '⚠ 2026/07/17（資料較舊，建議更新）', note: '上櫃' },
-  { code: '7835', name: '永悅健康-創',  exch: 'tse', shares: 237000, costPerShare: 48.00, cost: 11376000, price: 28.80, priceDate: '2026/08/04 收盤', note: '創新版' },
-  { code: '2330', name: '台積電',  exch: 'tse', shares: 30000, costPerShare: 2359.7302, cost: 70791906, price: 2320.00, priceDate: '2026/08/04 收盤', note: '上市' },
+  { code: '4137', name: '麗豐-KY', type: '上市', exch: 'tse', shares: 10000, costPerShare: 101.8444, cost: 1018444, price: 95.11, priceDate: '2026/08/03 收盤', note: '上市KY股；美容連鎖克麗緹娜；近5年平均殖利率>10%' },
+  { code: '4178', name: '永笙-KY', type: '上市', exch: 'tse', shares: 5658674, costPerShare: 25.4014, cost: 143738145, price: 17.65, priceDate: '2026/08/04 收盤', note: '臍帶血細胞庫；計劃115年Q2升板上市' },
+  { code: '6712', name: '長聖生技', type: '上櫃', exch: 'otc', shares: 13000, costPerShare: 142.1252, cost: 1847628, price: 150.00, priceDate: '⚠ 2026/07/17（資料較舊，建議更新）', note: '上櫃股' },
+  { code: '7835', name: '永悅健康-創', type: '創新板', exch: 'tse', shares: 237000, costPerShare: 48.00, cost: 11376000, price: 28.80, priceDate: '2026/08/04 收盤', note: '2026年7月創新板新掛牌；蜜月行情失靈' },
+  { code: '2330', name: '台積電', type: '上市', exch: 'tse', shares: 30000, costPerShare: 2359.7302, cost: 70791906, price: 2320.00, priceDate: '2026/08/04 收盤', note: '' },
 ];
 
 function fmt(n, d=0) {
   return n.toLocaleString('zh-TW', { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+// 簡短時間格式，例如「8/5 13:10」（不含年、不含秒）
+function shortTimeNow() {
+  const now = new Date();
+  return `${now.getMonth() + 1}/${now.getDate()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 }
 function signalFor(pct) {
   if (pct <= -20) return { cls: 'b-crit', label: '建議檢視停損' };
@@ -288,7 +289,6 @@ function computeAndRender() {
 
   const totalPL = totalFV - totalCost;
   const totalPLPct = totalCost !== 0 ? (totalPL / totalCost) * 100 : 0;
-  const maxWeight = rows.reduce((a,b) => b.weight > a.weight ? b : a, rows[0]);
 
   // KPI cards
   document.getElementById('kpiRow').innerHTML = `
@@ -301,10 +301,9 @@ function computeAndRender() {
   // Holdings table
   document.getElementById('holdingsBody').innerHTML = rows.map((r, i) => {
     const sig = signalFor(r.plPct);
-    const noteText = [r.type, r.note].filter(Boolean).join('；');
     return `
     <tr>
-      <td class="name">${r.name}<br><span style="font-size:11px;color:var(--text-muted);font-weight:400;">${r.code}</span></td>
+      <td class="name">${r.name}<br><span style="font-size:11px;color:var(--text-muted);font-weight:400;">${r.code}</span><br><span style="font-size:11px;color:var(--text-muted);font-weight:400;">${r.type}</span></td>
       <td>${fmt(r.shares)}</td>
       <td>${fmt(r.costPerShare,2)}</td>
       <td>
@@ -315,20 +314,13 @@ function computeAndRender() {
       <td class="${r.pl>=0?'pos':'neg'}">${r.pl>=0?'+':''}${fmt(r.pl)}</td>
       <td class="${r.plPct>=0?'pos':'neg'}">${r.plPct>=0?'+':''}${fmt(r.plPct,1)}%</td>
       <td><span class="badge ${sig.cls}"><span class="dot"></span>${sig.label}</span></td>
-      <td class="note">${noteText || '—'}</td>
     </tr>`;
   }).join('');
 
   // 各股佔投資組合比重（依公允價值），依比重排序，固定順位色階
   renderWeightList([...rows].sort((a,b) => b.weight - a.weight));
-  document.getElementById('concentrationNote').textContent =
-    maxWeight.weight >= 40
-      ? `集中度風險提醒：${maxWeight.name} 佔整體公開市場投資組合 ${fmt(maxWeight.weight,1)}%，單一標的集中度偏高。`
-      : `目前最大單一持股佔比為 ${fmt(maxWeight.weight,1)}%（${maxWeight.name}），集中度尚在可控範圍，仍建議持續留意。`;
 
   document.getElementById('totalsFooter').innerHTML =
-    `資料表小計（投資成本）：NT$ ${fmt(totalCost)}　｜　依現價計算之總公允價值：NT$ ${fmt(totalFV)}　｜　`+
-    `總未實現損益：${totalPL>=0?'+':''}NT$ ${fmt(totalPL)}（${totalPL>=0?'+':''}${fmt(totalPLPct,1)}%）<br>`+
     `本儀表板僅供內部決策參考，現價與損益數字之準確性取決於「現價」欄位是否為最新市價，請定期核對更新。`;
 }
 
@@ -427,7 +419,7 @@ async function tryMisRealtime(status) {
     const p = parsePrice(item);
     if (p !== null) {
       h.price = p;
-      h.priceDate = '即時（' + new Date().toLocaleString('zh-TW', { hour12: false }) + '）';
+      h.priceDate = '即時（' + shortTimeNow() + '）';
       found.add(h.code);
     }
   });
@@ -444,7 +436,7 @@ async function tryMisRealtime(status) {
       if (p !== null) {
         h.price = p;
         h.exch = h.exch === 'tse' ? 'otc' : 'tse'; // 記住猜對的市場，下次直接用
-        h.priceDate = '即時（' + new Date().toLocaleString('zh-TW', { hour12: false }) + '）';
+        h.priceDate = '即時（' + shortTimeNow() + '）';
         found.add(h.code);
       }
     });
@@ -540,13 +532,6 @@ async function fetchLivePrices() {
   btn.disabled = false;
 }
 
-function toggleTheme() {
-  const root = document.documentElement;
-  const current = root.getAttribute('data-theme');
-  if (current === 'dark') root.setAttribute('data-theme', 'light');
-  else if (current === 'light') root.removeAttribute('data-theme');
-  else root.setAttribute('data-theme', 'dark');
-}
 
 computeAndRender();
 
